@@ -5,7 +5,7 @@
 </p>
 
 # Modeling Spatial, Temporal, and Periodical Dependencies in Traffic with Product Graphs
-## CS4350 Learning for Graph Data (Group 27)
+## CS4350 Machine Learning for Graph Data (Group 27)
 
 ### Authors
 Aleksander Buszydlik
