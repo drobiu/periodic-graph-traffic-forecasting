@@ -14,10 +14,10 @@ data = data.to_numpy()
 # Transpose data to have sensors as rows
 data = data.T
 # Create a smaller dataset
-data_small = data[:50, :500]
+data_small = data[:207, :1000]
 
-# Look at 10 random nodes to average their values
-random_nodes = np.random.randint(0, 50, 10)
+# Look at 50 random nodes to average their values
+random_nodes = np.random.randint(0, 207, 50)
 
 # Time horizons of interest are 15, 30 and 60 minutes
 time_horizons = [15, 30, 60]
