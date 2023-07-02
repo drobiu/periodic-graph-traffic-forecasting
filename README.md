@@ -18,7 +18,7 @@ Edmundo Sanz-Gadea López
 ## User Manual
 - Clone repo:
 ```
-git clone https://github.com/francescoopiccoli/periodic-graph-traffic-forecasting.git
+git clone https://github.com/drobiu/periodic-graph-traffic-forecasting.git
 ```
 - Setup conda env:
 ```
@@ -52,13 +52,11 @@ conda env create -f environment.yml
     └── utils.py
 ```
 
-`models` directory contains the different graph neural networks utilized.
+`models` directory contains the our model and the baselines utilized.
 
-`train.py` file is used to train the models defined in the `models` folder.
+`train.py` file is used to train our model defined in the `models` folder.
 
-`utils.py` file contains the functions used to train and the functions to create the product graph.
+`utils.py` file contains all the functions used to train and all the functions to create the product graph.
 
 `hyperparams_optimization.py` file contains the code we used to perform hyperparams optimization.
-
-`GLOBAL.py` defines a dictionary mapping the models' names to the models' class objects.
 
