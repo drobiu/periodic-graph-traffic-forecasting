@@ -34,6 +34,11 @@ def hyperparams_optimization(
     ):
 
     def objective(trial):
+        if model_name:
+            log_name = model_name.split(".")
+            log_name = f"logs/{log_name[0]}_{trial.number}.log"
+        else:
+            log_name = f"logs/model_{trial.number}.log"
         # Set training parameters from Optuna suggestion
         learning_rate = trial.suggest_float('lr', *learning_rate_range)
         batch_size = trial.suggest_categorical('batch_size', batch_size_values)
@@ -41,6 +46,9 @@ def hyperparams_optimization(
         n_gnn_layers = trial.suggest_int('n_gnn_layers',*n_gnn_layers_range)
         K = trial.suggest_int('K', *K_range)
         dropout_rate = trial.suggest_float('dropout_rate', *dropout_rate_range)
+        
+        with open(log_name, "a") as f:
+            f.write(f"lr: {learning_rate}\nbatch size: {batch_size}\nhidden dim: {hidden_dim}\nn layers: {n_gnn_layers}\nK {K}\ndropout: {dropout_rate}\n")
           
         train_losses = []
         val_losses = []
@@ -60,7 +68,7 @@ def hyperparams_optimization(
             print("epoch:", epoch)
             model.train()
             train_loss = train_epoch(model, tra_loader, optimizer, device=device)
-            val_loss = evaluate_epoch(model=model, loader=val_loader, n_nodes=n_nodes, out_name=f"{model_name}_{epoch}.log", device=device)
+            val_loss = evaluate_epoch(model=model, loader=val_loader, n_nodes=n_nodes, out_name=log_name, device=device)
             
             train_losses.append(train_loss)
             val_losses.append(val_loss)
@@ -77,9 +85,12 @@ def hyperparams_optimization(
             except:
                 early_stop = 0
                 
-            print("epoch:",epoch, "\t training loss:", np.round(train_loss,4),
-                            "\t validation loss:", np.round(val_loss,4))
-
+            epoch_info = f"epoch: {epoch} \t training loss: {np.round(train_loss,4)} \t validation loss: {np.round(val_loss,4)}"
+            print(epoch_info)
+            with open(log_name, "a") as f:
+                f.write(epoch_info)
+            
+            
         return val_loss
 
     # Optimize hyperparameters

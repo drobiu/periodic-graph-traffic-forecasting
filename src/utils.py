@@ -41,7 +41,7 @@ def encode_time(timestamp):
     return week_day_sin, week_day_cos, hour_sin, hour_cos
 
 
-def create_spatiotemporal_data(adjacency, horizon, days_back=np.array([1, 1, 0, 0, 0, 0, 0, 1]), time_weight=1, prev_horizon=6):
+def create_spatiotemporal_data(adjacency, horizon, days_back=np.array([1, 1, 0, 0, 0, 0, 0, 1]), time_weight=1, prev_horizon=12, strong=False):
     n_nodes = len(adjacency)
     active_replicas = horizon + prev_horizon * np.count_nonzero(days_back[1:])
 
@@ -82,11 +82,20 @@ def create_spatiotemporal_data(adjacency, horizon, days_back=np.array([1, 1, 0, 
 
     edge_index = []
     # duplicate edge weights for each replica
-    features = features_orig * active_replicas
+    if strong:
+        features = features_orig * (2 * active_replicas - 1)
+    else:
+        features = features_orig * active_replicas
 
     # duplicate edge indices for each replica
     for offset in node_offsets:
         edge_index = [*edge_index, *(edge_index_orig + offset)]
+        
+    if strong:
+        for i in range(1, len(node_offsets)):
+            l_offset = node_offsets[i-1]
+            c_offset = node_offsets[i] 
+            edge_index = [*edge_index, *[[a[0] + l_offset, a[1] + c_offset] for a in edge_index_orig]]
 
     # connect nodes over timesteps in the same segment
     for i in range(n_nodes):
@@ -95,8 +104,8 @@ def create_spatiotemporal_data(adjacency, horizon, days_back=np.array([1, 1, 0, 
             to_node = offset + i
             edge_index.append([from_node, to_node])
             edge_index.append([to_node, from_node])
-            features.append(sim(data[data.columns[0]][from_node], data[data.columns[0]][to_node], offset))
-            features.append(sim(data[data.columns[0]][from_node], data[data.columns[0]][to_node], offset))
+            features.append(time_weight)
+            features.append(time_weight)
             
     # connect different time segments
     for i in range(n_nodes):
@@ -104,8 +113,8 @@ def create_spatiotemporal_data(adjacency, horizon, days_back=np.array([1, 1, 0, 
             from_node = offset + i + n_nodes
             edge_index.append([from_node, i])
             edge_index.append([i, from_node])
-            features.append(sim(data[data.columns[0]][from_node], data[data.columns[0]][i], offset))
-            features.append(sim(data[data.columns[0]][from_node], data[data.columns[0]][i], offset))
+            features.append(time_weight)
+            features.append(time_weight)
 
     edge_index = np.array(edge_index)
     features = np.array(features).reshape(-1, 1)
@@ -190,9 +199,9 @@ def evaluate_epoch(model, loader, n_nodes, out_name, device=torch.device('cuda:0
                 mae, rmse, mape*100)
     print(out)
     logs.append(out)
-
-    with open(out_name, "w") as f:
-        f.write(str(logs))
+    
+    with open(out_name, "a") as f:
+        [f.write(str(log) + "\n") for log in logs]
 
     return np.mean(losses)
 
@@ -304,6 +313,12 @@ def train_model(
         device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu'), 
         model_name=None
     ):
+    
+    if model_name:
+        log_name = model_name.split(".")
+        log_name = f"logs/{log_name[0]}.log"
+    else:
+        log_name = f"logs/model.log"
 
     # Create the optimizer to train the neural network via back-propagation
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
@@ -325,17 +340,18 @@ def train_model(
         train_loss = train_epoch(model, tra_loader, optimizer, device=device)
 
         # Model validation
-        val_loss = evaluate_epoch(model=model, loader=val_loader, n_nodes=n_nodes, out_name=f"{model_name}_{epoch}.log", device=device)
+        val_loss = evaluate_epoch(model=model, loader=val_loader, n_nodes=n_nodes, out_name=log_name, device=device)
         train_losses.append(train_loss)
         val_losses.append(val_loss)
 
         # Early stopping
+        model_save_file = f'model_{start_time}_final.pth'
         try:  
             if val_losses[-1]>=val_losses[-2]:
                 
                 if epoch % 10 == 0:
                     print(f"saving {model_name}")
-                    torch.save(model, model_name)
+                    torch.save(model, model_save_file)
                     
                 early_stop += 1
                 if early_stop == patience:
@@ -343,19 +359,21 @@ def train_model(
                     break
             else:
                 print(f"saving {model_name}")
-                torch.save(model, model_name)
+                torch.save(model, model_save_file)
                 early_stop = 0
         except:
             early_stop = 0
 
-        print("epoch:",epoch, "\t training loss:", np.round(train_loss,4),
-                            "\t validation loss:", np.round(val_loss,4))
+        epoch_info = f"epoch: {epoch} \t training loss: {np.round(train_loss,4)} \t validation loss: {np.round(val_loss,4)}"
+        print(epoch_info)
+        with open(log_name, "a") as f:
+            f.write(epoch_info)
 
     elapsed_time = time.time() - start_time
     print(f'Model training took {elapsed_time:.3f} seconds')
 
     if save_model:
-        torch.save(model, f'model_{start_time}_final.pth')
+        torch.save(model, model_save_file)
 
 
 
