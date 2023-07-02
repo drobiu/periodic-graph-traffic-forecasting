@@ -4,9 +4,10 @@
   <br><br>
 </p>
 
-# Group 27: Machine Learning for Graph Data (CS4350) project 
+# Modeling Spatial, Temporal, and Periodical Dependencies in Traffic with Product Graphs
+## CS4350 Learning for Graph Data (Group 27)
 
-## Authors
+### Authors
 Aleksander Buszydlik
 
 Karol Dobiczek
